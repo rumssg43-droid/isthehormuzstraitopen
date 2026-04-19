@@ -126,7 +126,7 @@ export default async function Home() {
             Live traffic in the strait
           </p>
           <div
-            className={`${style.panel} rounded-xl overflow-hidden aspect-[4/3] sm:aspect-[16/9]`}
+            className={`${style.panel} hidden md:block rounded-xl overflow-hidden aspect-[16/9]`}
           >
             <iframe
               src="https://www.marinetraffic.com/en/ais/embed/zoom:8/centery:26.5/centerx:56.3/maptype:0/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vlist:false/remember:true"
@@ -135,6 +135,19 @@ export default async function Home() {
               title="Live ship traffic in the Strait of Hormuz via MarineTraffic"
             />
           </div>
+          <a
+            href="https://www.marinetraffic.com/en/ais/home/centerx:56.3/centery:26.5/zoom:8"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${style.panel} md:hidden block rounded-xl p-6 hover:opacity-80 transition-opacity text-left`}
+          >
+            <div className="font-bold text-base leading-tight">
+              Open live ship map →
+            </div>
+            <div className="text-xs opacity-80 mt-1 leading-snug">
+              See every tanker and cargo ship moving through the strait right now. Opens MarineTraffic in a new tab.
+            </div>
+          </a>
           <p className="text-xs opacity-70">
             Live AIS data from{" "}
             <a
