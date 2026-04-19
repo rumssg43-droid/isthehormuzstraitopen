@@ -45,15 +45,42 @@ function formatPct(n: number) {
   return `${sign}${n.toFixed(2)}%`;
 }
 
+const STATE_ANSWER_PREFIX: Record<VerdictState, string> = {
+  YES: "Yes, the Strait of Hormuz is currently open to commercial shipping.",
+  NO: "No, the Strait of Hormuz is currently closed or blocked to commercial shipping.",
+  KINDA: "Kind of. The Strait of Hormuz is open but commercial shipping is being partially disrupted.",
+  UNKNOWN: "The current status of the Strait of Hormuz could not be determined right now.",
+};
+
 export default async function Home() {
   const verdict = await getVerdict();
   const style = STATE_STYLES[verdict.state];
   const { brent } = verdict.signals;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "Is the Strait of Hormuz open?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${STATE_ANSWER_PREFIX[verdict.state]} ${verdict.reasoning}`,
+          dateCreated: verdict.checkedAt,
+        },
+      },
+    ],
+  };
+
   return (
     <div
       className={`${style.bg} ${style.fg} min-h-screen flex flex-col items-center justify-between px-6 py-10 gap-10 font-sans`}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <header className="w-full max-w-4xl text-center">
         <h1 className="text-xl sm:text-2xl font-medium tracking-tight opacity-90">
           Is the Strait of Hormuz open?
