@@ -52,7 +52,7 @@ export default async function Home() {
 
   return (
     <div
-      className={`${style.bg} ${style.fg} flex-1 flex flex-col items-center justify-between px-6 py-10 font-sans`}
+      className={`${style.bg} ${style.fg} min-h-screen flex flex-col items-center justify-between px-6 py-10 gap-10 font-sans`}
     >
       <header className="w-full max-w-4xl text-center">
         <h1 className="text-xl sm:text-2xl font-medium tracking-tight opacity-90">
@@ -60,7 +60,7 @@ export default async function Home() {
         </h1>
       </header>
 
-      <main className="flex flex-1 items-center justify-center w-full">
+      <main className="flex items-center justify-center w-full min-h-[50vh]">
         <h2
           className={`${style.size} leading-none font-black tracking-tighter text-center select-none`}
         >
@@ -68,7 +68,7 @@ export default async function Home() {
         </h2>
       </main>
 
-      <footer className="w-full max-w-3xl text-center space-y-5 text-sm sm:text-base opacity-95">
+      <footer className="w-full max-w-5xl text-center space-y-6 text-sm sm:text-base opacity-95">
         <p className="text-base sm:text-lg leading-snug">
           {verdict.reasoning}
         </p>
@@ -119,6 +119,34 @@ export default async function Home() {
               Advisories →
             </a>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="font-semibold uppercase text-xs tracking-widest opacity-80">
+            Live traffic in the strait
+          </p>
+          <div
+            className={`${style.panel} rounded-xl overflow-hidden aspect-[4/3] sm:aspect-[16/9]`}
+          >
+            <iframe
+              src="https://www.marinetraffic.com/en/ais/embed/zoom:8/centery:26.5/centerx:56.3/maptype:0/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:0/vlist:false/remember:true"
+              className="w-full h-full border-0"
+              loading="lazy"
+              title="Live ship traffic in the Strait of Hormuz via MarineTraffic"
+            />
+          </div>
+          <p className="text-xs opacity-70">
+            Live AIS data from{" "}
+            <a
+              href="https://www.marinetraffic.com/en/ais/home/centerx:56.3/centery:26.5/zoom:8"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              MarineTraffic
+            </a>
+            . Each marker is a real vessel.
+          </p>
         </div>
 
         {verdict.sources.length > 0 && (
