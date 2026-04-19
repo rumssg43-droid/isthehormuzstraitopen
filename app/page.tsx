@@ -4,31 +4,35 @@ export const revalidate = 3600;
 
 const STATE_STYLES: Record<
   VerdictState,
-  { bg: string; fg: string; label: string; size: string }
+  { bg: string; fg: string; label: string; size: string; panel: string }
 > = {
   YES: {
     bg: "bg-green-500",
     fg: "text-white",
     label: "YES",
     size: "text-[30vw] sm:text-[28vw]",
+    panel: "bg-black/15",
   },
   NO: {
     bg: "bg-red-600",
     fg: "text-white",
     label: "NO",
     size: "text-[40vw] sm:text-[38vw]",
+    panel: "bg-black/20",
   },
   KINDA: {
     bg: "bg-amber-400",
     fg: "text-black",
     label: "KINDA",
     size: "text-[22vw] sm:text-[20vw]",
+    panel: "bg-black/10",
   },
   UNKNOWN: {
     bg: "bg-zinc-500",
     fg: "text-white",
     label: "UNKNOWN",
     size: "text-[14vw] sm:text-[14vw]",
+    panel: "bg-black/20",
   },
 };
 
@@ -36,9 +40,15 @@ function formatTime(iso: string) {
   return new Date(iso).toUTCString();
 }
 
+function formatPct(n: number) {
+  const sign = n >= 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)}%`;
+}
+
 export default async function Home() {
   const verdict = await getVerdict();
   const style = STATE_STYLES[verdict.state];
+  const { brent } = verdict.signals;
 
   return (
     <div
@@ -58,10 +68,59 @@ export default async function Home() {
         </h2>
       </main>
 
-      <footer className="w-full max-w-2xl text-center space-y-4 text-sm sm:text-base opacity-95">
+      <footer className="w-full max-w-3xl text-center space-y-5 text-sm sm:text-base opacity-95">
         <p className="text-base sm:text-lg leading-snug">
           {verdict.reasoning}
         </p>
+
+        <div
+          className={`${style.panel} rounded-xl grid grid-cols-3 gap-2 p-3 sm:p-4 text-center`}
+        >
+          <div className="flex flex-col">
+            <span className="text-[10px] sm:text-xs uppercase tracking-widest opacity-70">
+              Brent crude
+            </span>
+            {brent ? (
+              <>
+                <span className="font-bold text-base sm:text-xl leading-tight">
+                  ${brent.price}
+                </span>
+                <span className="text-xs sm:text-sm opacity-80">
+                  {formatPct(brent.change24h)} 24h
+                </span>
+              </>
+            ) : (
+              <span className="font-bold text-base sm:text-xl">—</span>
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <span className="text-[10px] sm:text-xs uppercase tracking-widest opacity-70">
+              Headlines
+            </span>
+            <span className="font-bold text-base sm:text-xl leading-tight">
+              {verdict.signals.headlineCount}
+            </span>
+            <span className="text-xs sm:text-sm opacity-80">
+              matched
+            </span>
+          </div>
+
+          <div className="flex flex-col justify-center">
+            <span className="text-[10px] sm:text-xs uppercase tracking-widest opacity-70">
+              UKMTO
+            </span>
+            <a
+              href="https://www.ukmto.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-sm sm:text-base underline underline-offset-2 decoration-2 hover:opacity-70 leading-tight"
+            >
+              Advisories →
+            </a>
+          </div>
+        </div>
+
         {verdict.sources.length > 0 && (
           <div className="space-y-1">
             <p className="font-semibold uppercase text-xs tracking-widest opacity-80">
@@ -83,8 +142,9 @@ export default async function Home() {
             </ul>
           </div>
         )}
+
         <p className="text-xs opacity-70">
-          Confidence: {verdict.confidence} · Checked {formatTime(verdict.checkedAt)} · Refreshes hourly · Based on BBC and Al Jazeera headlines
+          Confidence: {verdict.confidence} · Checked {formatTime(verdict.checkedAt)} · Refreshes hourly · BBC · Al Jazeera · Maritime Executive · gCaptain · Google News
         </p>
       </footer>
     </div>

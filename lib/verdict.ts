@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import Parser from "rss-parser";
+import { fetchBrent, type BrentSignal } from "./signals";
 
 const FEEDS = [
   {
@@ -9,6 +10,18 @@ const FEEDS = [
   {
     outlet: "Al Jazeera",
     url: "https://www.aljazeera.com/xml/rss/all.xml",
+  },
+  {
+    outlet: "Maritime Executive",
+    url: "https://www.maritime-executive.com/articles.rss",
+  },
+  {
+    outlet: "gCaptain",
+    url: "https://gcaptain.com/feed/",
+  },
+  {
+    outlet: "Google News",
+    url: "https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22&hl=en-US&gl=US&ceid=US:en",
   },
 ];
 
@@ -29,6 +42,10 @@ export type Verdict = {
   confidence: "high" | "medium" | "low";
   reasoning: string;
   sources: Source[];
+  signals: {
+    brent: BrentSignal | null;
+    headlineCount: number;
+  };
   checkedAt: string;
 };
 
@@ -51,7 +68,12 @@ async function fetchHeadlines(): Promise<Headline[]> {
         for (const item of parsed.items ?? []) {
           const title = item.title ?? "";
           const snippet = item.contentSnippet ?? "";
-          if (KEYWORDS.test(title) || KEYWORDS.test(snippet)) {
+          const isHormuzAggregator = feed.outlet === "Google News";
+          if (
+            isHormuzAggregator ||
+            KEYWORDS.test(title) ||
+            KEYWORDS.test(snippet)
+          ) {
             results.push({
               outlet: feed.outlet,
               title,
@@ -67,12 +89,20 @@ async function fetchHeadlines(): Promise<Headline[]> {
     }),
   );
 
-  return results.slice(0, 20);
+  return results.slice(0, 30);
 }
 
-const SYSTEM_PROMPT = `You determine whether the Strait of Hormuz is currently open to commercial shipping, based on recent news headlines from BBC and Al Jazeera.
+function buildSystemPrompt(brent: BrentSignal | null): string {
+  const brentLine = brent
+    ? `Brent crude: $${brent.price} (${brent.change24h >= 0 ? "+" : ""}${brent.change24h}% 24h, ${brent.change7d >= 0 ? "+" : ""}${brent.change7d}% 7d)`
+    : "Brent crude: unavailable";
 
-The Strait of Hormuz is a narrow waterway between Iran and Oman. Roughly 20% of the world's oil passes through it. In practice it has almost never been physically closed, but tensions, tanker seizures, missile strikes, and Iranian threats to close it regularly disrupt traffic.
+  return `You determine whether the Strait of Hormuz is currently open to commercial shipping, based on recent news headlines and market signals.
+
+The Strait of Hormuz is a narrow waterway between Iran and Oman. Roughly 20% of the world's oil passes through it. In practice it has almost never been physically closed, but tensions, tanker seizures, missile strikes, and Iranian threats to close it regularly disrupt traffic. When the strait is genuinely disrupted, Brent crude reacts within hours — a calm market (<±1% 24h) is strong evidence that shipping is flowing.
+
+MARKET SIGNAL (at request time):
+${brentLine}
 
 You must output ONLY a single valid JSON object. No preamble, no markdown, no prose outside the JSON.
 
@@ -80,18 +110,19 @@ Schema:
 {
   "state": "YES" | "NO" | "KINDA",
   "confidence": "high" | "medium" | "low",
-  "reasoning": "one or two sentences citing what the headlines indicate",
+  "reasoning": "one or two sentences citing what the headlines AND market indicate",
   "source_indices": [number, ...]
 }
 
 State definitions:
-- YES: shipping is flowing normally. No active closure or serious disruption in the provided headlines.
-- NO: the strait is actually closed, blocked, mined, or commercial shipping has halted.
-- KINDA: partial disruption — tanker seizures, missile exchanges, heightened military presence, explicit Iranian threats to close it, drone attacks on shipping — but not fully closed.
+- YES: shipping is flowing normally. No active closure or serious disruption in the provided headlines. Calm oil market supports YES.
+- NO: the strait is actually closed, blocked, mined, or commercial shipping has halted. This should be accompanied by a sharp Brent spike; if Brent is flat, be very skeptical of NO.
+- KINDA: partial disruption — tanker seizures, missile exchanges, heightened military presence, explicit Iranian threats to close it, drone attacks on shipping — but not fully closed. Typically Brent is elevated but not spiking.
 
 "source_indices" must reference indices into the headline list the user provides you (0-based, max 4 entries, pick the ones most load-bearing for your verdict).
 
-If none of the headlines are relevant to the strait, default to {"state": "YES", "confidence": "low", "reasoning": "No recent news indicates disruption.", "source_indices": []}.`;
+If none of the headlines are relevant to the strait, default to {"state": "YES", "confidence": "low", "reasoning": "No recent news indicates disruption; oil market calm.", "source_indices": []}.`;
+}
 
 function extractJson(text: string): string {
   const trimmed = text.trim();
@@ -103,15 +134,21 @@ function extractJson(text: string): string {
 
 export async function getVerdict(): Promise<Verdict> {
   const checkedAt = new Date().toISOString();
-  const headlines = await fetchHeadlines();
+  const [headlines, brent] = await Promise.all([
+    fetchHeadlines(),
+    fetchBrent(),
+  ]);
+
+  const signals = { brent, headlineCount: headlines.length };
 
   if (headlines.length === 0) {
     return {
       state: "YES",
       confidence: "low",
       reasoning:
-        "No recent BBC or Al Jazeera headlines mention the Strait of Hormuz. Absence of news usually means normal operations.",
+        "No recent headlines from BBC, Al Jazeera, Maritime Executive, gCaptain, or Google News mention the Strait of Hormuz. Absence of news usually means normal operations.",
       sources: [],
+      signals,
       checkedAt,
     };
   }
@@ -132,7 +169,7 @@ export async function getVerdict(): Promise<Verdict> {
       model: "claude-opus-4-7",
       max_tokens: 1500,
       thinking: { type: "adaptive" },
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(brent),
       messages: [{ role: "user", content: userContent }],
     });
 
@@ -163,6 +200,7 @@ export async function getVerdict(): Promise<Verdict> {
       confidence: parsed.confidence,
       reasoning: parsed.reasoning,
       sources,
+      signals,
       checkedAt,
     };
   } catch (err) {
@@ -178,6 +216,7 @@ export async function getVerdict(): Promise<Verdict> {
         url: h.url,
         pubDate: h.pubDate,
       })),
+      signals,
       checkedAt,
     };
   }
