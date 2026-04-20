@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { getVerdict, type VerdictState } from "@/lib/verdict";
 
 export const revalidate = 3600;
@@ -54,6 +55,10 @@ const STATE_ANSWER_PREFIX: Record<VerdictState, string> = {
 
 export default async function Home() {
   const verdict = await getVerdict();
+  if (verdict.state === "UNKNOWN") {
+    // Classification failed — don't cache the fallback so next request retries.
+    noStore();
+  }
   const style = STATE_STYLES[verdict.state];
   const { brent } = verdict.signals;
 

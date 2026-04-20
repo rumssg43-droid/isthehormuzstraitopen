@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { ImageResponse } from "next/og";
 import { getVerdict, type VerdictState } from "@/lib/verdict";
 
@@ -18,6 +19,9 @@ const STATE_STYLE: Record<
 
 export default async function Image() {
   const verdict = await getVerdict();
+  if (verdict.state === "UNKNOWN") {
+    noStore();
+  }
   const style = STATE_STYLE[verdict.state];
 
   return new ImageResponse(

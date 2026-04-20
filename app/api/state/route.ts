@@ -5,6 +5,12 @@ export const revalidate = 3600;
 
 export async function GET() {
   const v = await getVerdict();
+  // If classification failed, don't let clients or CDNs cache the UNKNOWN
+  // response — next caller re-runs and probably succeeds.
+  const cacheControl =
+    v.state === "UNKNOWN"
+      ? "no-store"
+      : "public, s-maxage=3600, stale-while-revalidate=86400";
   return NextResponse.json(
     {
       state: v.state,
@@ -18,8 +24,7 @@ export async function GET() {
     },
     {
       headers: {
-        "cache-control":
-          "public, s-maxage=3600, stale-while-revalidate=86400",
+        "cache-control": cacheControl,
         "access-control-allow-origin": "*",
         "access-control-allow-methods": "GET",
       },
