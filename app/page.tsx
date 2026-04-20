@@ -57,17 +57,50 @@ export default async function Home() {
   const style = STATE_STYLES[verdict.state];
   const { brent } = verdict.signals;
 
+  const SITE_URL = "https://www.isthehormuzstraitopen.net";
+  const answerText = `${STATE_ANSWER_PREFIX[verdict.state]} ${verdict.reasoning}`;
+
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
+    "@graph": [
       {
-        "@type": "Question",
-        name: "Is the Strait of Hormuz open?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `${STATE_ANSWER_PREFIX[verdict.state]} ${verdict.reasoning}`,
-          dateCreated: verdict.checkedAt,
+        "@type": "FAQPage",
+        "@id": `${SITE_URL}/#faq`,
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Is the Strait of Hormuz open?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: answerText,
+              dateCreated: verdict.checkedAt,
+            },
+          },
+        ],
+      },
+      {
+        "@type": "NewsArticle",
+        "@id": `${SITE_URL}/#article`,
+        headline: `Strait of Hormuz status: ${verdict.state}`,
+        description: answerText,
+        datePublished: verdict.checkedAt,
+        dateModified: verdict.checkedAt,
+        url: SITE_URL,
+        mainEntityOfPage: SITE_URL,
+        image: [`${SITE_URL}/opengraph-image`],
+        author: {
+          "@type": "Organization",
+          name: "Is the Strait of Hormuz open?",
+          url: SITE_URL,
+        },
+        publisher: {
+          "@type": "Organization",
+          name: "Is the Strait of Hormuz open?",
+          url: SITE_URL,
+          logo: {
+            "@type": "ImageObject",
+            url: `${SITE_URL}/opengraph-image`,
+          },
         },
       },
     ],

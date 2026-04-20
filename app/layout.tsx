@@ -54,6 +54,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://www.marinetraffic.com" />
+        <link rel="dns-prefetch" href="https://www.marinetraffic.com" />
+        <link rel="preconnect" href="https://query1.finance.yahoo.com" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
